@@ -47,6 +47,17 @@ class TestProtobufFrameSerializer(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIsInstance(frame, InterruptionFrame)
 
+    async def test_malformed_message_is_dropped(self):
+        # Raising here would end the transport's receive loop, and the session.
+        for data in (b"\xff\xff\xff", b"\x0a\x05ab", "ping"):
+            with self.subTest(data=data):
+                self.assertIsNone(await self.serializer.deserialize(data))
+
+        frame = await self.serializer.deserialize(
+            await self.serializer.serialize(TextFrame(text="still working"))
+        )
+        self.assertEqual(frame.text, "still working")
+
 
 if __name__ == "__main__":
     unittest.main()
